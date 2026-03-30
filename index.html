@@ -1,0 +1,1433 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>YT Vault — Download Anything</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #111118;
+    --card: #16161f;
+    --border: #2a2a3a;
+    --accent: #ff3c5f;
+    --accent2: #ff8c42;
+    --accent3: #6c63ff;
+    --text: #f0f0f8;
+    --muted: #7a7a9a;
+    --success: #2ecc71;
+    --warn: #f39c12;
+    --danger: #e74c3c;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Space Mono', monospace;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Animated grid background */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(108,99,255,0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(108,99,255,0.04) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* Glow orbs */
+  .orb {
+    position: fixed;
+    border-radius: 50%;
+    filter: blur(120px);
+    pointer-events: none;
+    z-index: 0;
+    animation: orbFloat 8s ease-in-out infinite;
+  }
+  .orb1 { width: 500px; height: 500px; background: rgba(255,60,95,0.12); top: -150px; left: -100px; animation-delay: 0s; }
+  .orb2 { width: 400px; height: 400px; background: rgba(108,99,255,0.1); bottom: -100px; right: -100px; animation-delay: 3s; }
+  .orb3 { width: 300px; height: 300px; background: rgba(255,140,66,0.08); top: 50%; left: 50%; transform: translate(-50%,-50%); animation-delay: 1.5s; }
+
+  @keyframes orbFloat {
+    0%, 100% { transform: translateY(0) scale(1); }
+    50% { transform: translateY(-30px) scale(1.05); }
+  }
+
+  /* Layout */
+  .container { position: relative; z-index: 1; max-width: 900px; margin: 0 auto; padding: 0 24px; }
+
+  /* Header */
+  header {
+    padding: 32px 0 0;
+    text-align: center;
+  }
+
+  .logo {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 8px;
+  }
+
+  .logo-icon {
+    width: 44px; height: 44px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px;
+    box-shadow: 0 0 24px rgba(255,60,95,0.4);
+  }
+
+  .logo-text {
+    font-family: 'Syne', sans-serif;
+    font-size: 28px;
+    font-weight: 800;
+    letter-spacing: -1px;
+    background: linear-gradient(90deg, var(--accent), var(--accent2), var(--accent3));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .tagline {
+    color: var(--muted);
+    font-size: 12px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    margin-top: 4px;
+  }
+
+  /* Server status bar */
+  .status-bar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin: 24px 0 0;
+    padding: 10px 20px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 100px;
+    font-size: 11px;
+    width: fit-content;
+    margin-left: auto;
+    margin-right: auto;
+    transition: all 0.3s;
+  }
+
+  .status-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--warn);
+    animation: pulse 2s infinite;
+  }
+  .status-dot.online { background: var(--success); box-shadow: 0 0 8px var(--success); }
+  .status-dot.offline { background: var(--danger); animation: none; }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+
+  /* Main card */
+  .main-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 32px;
+    margin: 28px 0;
+    backdrop-filter: blur(10px);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .main-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--accent), var(--accent2), var(--accent3), transparent);
+  }
+
+  /* URL Input */
+  .input-group {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+
+  .url-input {
+    flex: 1;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 18px;
+    font-family: 'Space Mono', monospace;
+    font-size: 13px;
+    color: var(--text);
+    outline: none;
+    transition: all 0.2s;
+  }
+
+  .url-input:focus {
+    border-color: var(--accent3);
+    box-shadow: 0 0 0 3px rgba(108,99,255,0.15);
+  }
+
+  .url-input::placeholder { color: var(--muted); }
+
+  .btn-fetch {
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border: none;
+    border-radius: 12px;
+    padding: 14px 24px;
+    color: white;
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+    letter-spacing: 0.5px;
+  }
+
+  .btn-fetch:hover { transform: translateY(-1px); box-shadow: 0 8px 24px rgba(255,60,95,0.35); }
+  .btn-fetch:active { transform: translateY(0); }
+  .btn-fetch:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+  /* Tabs */
+  .tabs {
+    display: flex;
+    gap: 4px;
+    background: var(--surface);
+    border-radius: 10px;
+    padding: 4px;
+    margin-bottom: 20px;
+    border: 1px solid var(--border);
+  }
+
+  .tab {
+    flex: 1;
+    padding: 9px 16px;
+    border: none;
+    border-radius: 7px;
+    background: transparent;
+    color: var(--muted);
+    font-family: 'Space Mono', monospace;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+  }
+
+  .tab.active {
+    background: var(--card);
+    color: var(--text);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+  }
+
+  /* Video info preview */
+  .video-preview {
+    display: none;
+    gap: 16px;
+    align-items: flex-start;
+    padding: 16px;
+    background: var(--surface);
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    margin-bottom: 20px;
+    animation: slideIn 0.3s ease;
+  }
+  .video-preview.show { display: flex; }
+
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateY(-8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .thumb-container {
+    position: relative;
+    flex-shrink: 0;
+    width: 120px;
+    height: 68px;
+    border-radius: 8px;
+    overflow: hidden;
+    background: var(--border);
+  }
+
+  .thumb-container img {
+    width: 100%; height: 100%;
+    object-fit: cover;
+  }
+
+  .duration-badge {
+    position: absolute;
+    bottom: 4px; right: 4px;
+    background: rgba(0,0,0,0.85);
+    color: white;
+    font-size: 10px;
+    padding: 2px 5px;
+    border-radius: 4px;
+    font-family: 'Space Mono', monospace;
+  }
+
+  .video-meta { flex: 1; min-width: 0; }
+  .video-title {
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 14px;
+    margin-bottom: 6px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .video-channel { color: var(--muted); font-size: 11px; margin-bottom: 4px; }
+  .video-views { color: var(--muted); font-size: 11px; }
+
+  /* Format sections */
+  .section-label {
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .section-label::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+  /* Format grid */
+  .format-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+
+  .format-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px;
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .format-card:hover {
+    border-color: var(--accent3);
+    background: rgba(108,99,255,0.08);
+    transform: translateY(-1px);
+  }
+
+  .format-card.selected {
+    border-color: var(--accent);
+    background: rgba(255,60,95,0.08);
+    box-shadow: 0 0 0 1px var(--accent);
+  }
+
+  .format-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: rgba(255,255,255,0.07);
+    border-radius: 6px;
+    padding: 3px 8px;
+    font-size: 11px;
+    margin-bottom: 8px;
+    font-weight: 700;
+  }
+
+  .badge-video { color: #ff6b8a; }
+  .badge-audio { color: #6c63ff; }
+  .badge-4k { color: var(--accent2); }
+  .badge-best { background: rgba(255,60,95,0.15); color: var(--accent); }
+
+  .format-res {
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 18px;
+    line-height: 1;
+    margin-bottom: 4px;
+  }
+
+  .format-info {
+    font-size: 10px;
+    color: var(--muted);
+    line-height: 1.5;
+  }
+
+  .format-size {
+    font-size: 11px;
+    color: var(--accent2);
+    margin-top: 6px;
+    font-weight: 700;
+  }
+
+  /* Important note about audio */
+  .merge-note {
+    background: rgba(255,140,66,0.08);
+    border: 1px solid rgba(255,140,66,0.25);
+    border-radius: 10px;
+    padding: 12px 16px;
+    font-size: 11px;
+    color: var(--accent2);
+    margin-bottom: 16px;
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    line-height: 1.6;
+  }
+
+  .merge-note .icon { font-size: 16px; flex-shrink: 0; }
+
+  /* Download options */
+  .options-row {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+  }
+
+  .option-select {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 14px;
+    color: var(--text);
+    font-family: 'Space Mono', monospace;
+    font-size: 12px;
+    outline: none;
+    flex: 1;
+    min-width: 160px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .option-select:focus { border-color: var(--accent3); }
+
+  /* Download button */
+  .btn-download {
+    width: 100%;
+    padding: 16px;
+    background: linear-gradient(135deg, var(--accent3), var(--accent));
+    border: none;
+    border-radius: 12px;
+    color: white;
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 16px;
+    letter-spacing: 1px;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .btn-download::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+    transform: translateX(-100%);
+    transition: transform 0.5s;
+  }
+
+  .btn-download:hover::before { transform: translateX(100%); }
+  .btn-download:hover { transform: translateY(-2px); box-shadow: 0 12px 32px rgba(108,99,255,0.4); }
+  .btn-download:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+  /* Progress */
+  .progress-container {
+    display: none;
+    margin-bottom: 16px;
+    animation: slideIn 0.3s;
+  }
+  .progress-container.show { display: block; }
+
+  .progress-bar-bg {
+    height: 6px;
+    background: var(--border);
+    border-radius: 100px;
+    overflow: hidden;
+    margin-top: 8px;
+  }
+
+  .progress-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent3), var(--accent));
+    border-radius: 100px;
+    width: 0%;
+    transition: width 0.3s;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .progress-bar-fill::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+    animation: shimmer 1.5s infinite;
+  }
+
+  @keyframes shimmer {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+  }
+
+  .progress-text { font-size: 11px; color: var(--muted); display: flex; justify-content: space-between; }
+
+  /* Download history */
+  .history-section { margin-top: 0; }
+
+  .history-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    margin-bottom: 8px;
+    animation: slideIn 0.3s;
+    transition: all 0.2s;
+  }
+
+  .history-item:hover { border-color: var(--border); background: var(--card); }
+
+  .history-icon {
+    width: 36px; height: 36px;
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px;
+    flex-shrink: 0;
+  }
+
+  .history-icon.video { background: rgba(255,60,95,0.12); }
+  .history-icon.audio { background: rgba(108,99,255,0.12); }
+
+  .history-info { flex: 1; min-width: 0; }
+  .history-title { font-size: 12px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .history-meta { font-size: 10px; color: var(--muted); margin-top: 2px; }
+
+  .history-status {
+    font-size: 10px;
+    padding: 4px 8px;
+    border-radius: 6px;
+    font-weight: 700;
+  }
+  .status-done { background: rgba(46,204,113,0.12); color: var(--success); }
+  .status-error { background: rgba(231,76,60,0.12); color: var(--danger); }
+  .status-loading { background: rgba(108,99,255,0.12); color: var(--accent3); }
+
+  /* Setup guide */
+  .setup-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 28px 32px;
+    margin-bottom: 24px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .setup-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; height: 2px;
+    background: linear-gradient(90deg, var(--accent3), transparent);
+  }
+
+  .setup-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 18px;
+    font-weight: 800;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .setup-steps { counter-reset: step; }
+
+  .step {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 16px;
+    align-items: flex-start;
+  }
+
+  .step-num {
+    width: 28px; height: 28px;
+    border-radius: 8px;
+    background: linear-gradient(135deg, var(--accent3), var(--accent));
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 12px;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+
+  .step-content { flex: 1; }
+  .step-title { font-size: 13px; font-weight: 700; margin-bottom: 4px; }
+  .step-desc { font-size: 11px; color: var(--muted); line-height: 1.6; }
+
+  .code-block {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 11px;
+    color: var(--accent2);
+    margin-top: 8px;
+    font-family: 'Space Mono', monospace;
+    position: relative;
+    line-height: 1.7;
+  }
+
+  .copy-btn {
+    position: absolute;
+    top: 6px; right: 6px;
+    background: var(--border);
+    border: none;
+    border-radius: 5px;
+    padding: 3px 8px;
+    color: var(--muted);
+    font-size: 9px;
+    cursor: pointer;
+    font-family: 'Space Mono', monospace;
+    transition: all 0.2s;
+  }
+  .copy-btn:hover { background: var(--accent3); color: white; }
+
+  /* Alert / toast */
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 18px;
+    font-size: 12px;
+    max-width: 320px;
+    z-index: 999;
+    display: none;
+    animation: toastIn 0.3s ease;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+  }
+  .toast.show { display: flex; gap: 10px; align-items: center; }
+  .toast.success { border-color: rgba(46,204,113,0.3); }
+  .toast.error { border-color: rgba(231,76,60,0.3); }
+
+  @keyframes toastIn {
+    from { opacity: 0; transform: translateY(16px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* Empty state */
+  .empty-state {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--muted);
+  }
+  .empty-icon { font-size: 48px; margin-bottom: 12px; opacity: 0.5; }
+  .empty-text { font-size: 13px; }
+
+  /* Loading spinner */
+  .spinner {
+    width: 16px; height: 16px;
+    border: 2px solid rgba(255,255,255,0.2);
+    border-top-color: white;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    display: inline-block;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Responsive */
+  @media (max-width: 600px) {
+    .input-group { flex-direction: column; }
+    .format-grid { grid-template-columns: 1fr 1fr; }
+    .main-card { padding: 20px 16px; }
+    .setup-card { padding: 20px 16px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="orb orb1"></div>
+<div class="orb orb2"></div>
+<div class="orb orb3"></div>
+
+<div class="container">
+  <header>
+    <div class="logo">
+      <div class="logo-icon">▶</div>
+      <span class="logo-text">YT Vault</span>
+    </div>
+    <div class="tagline">Download anything • Every format • With audio</div>
+    <div class="status-bar" id="statusBar">
+      <div class="status-dot" id="statusDot"></div>
+      <span id="statusText">Checking backend…</span>
+    </div>
+  </header>
+
+  <!-- Main downloader card -->
+  <div class="main-card">
+    <div class="input-group">
+      <input
+        type="text"
+        class="url-input"
+        id="urlInput"
+        placeholder="Paste YouTube / SoundCloud / Instagram URL…"
+        autocomplete="off"
+      />
+      <button class="btn-fetch" id="btnFetch" onclick="fetchInfo()">
+        <span id="fetchBtnText">Fetch</span>
+      </button>
+    </div>
+
+    <div class="tabs">
+      <button class="tab active" id="tab-video" onclick="switchTab('video')">🎬 Video + Audio</button>
+      <button class="tab" id="tab-audio" onclick="switchTab('audio')">🎵 Audio Only</button>
+      <button class="tab" id="tab-custom" onclick="switchTab('custom')">⚙️ Custom</button>
+    </div>
+
+    <!-- Video preview -->
+    <div class="video-preview" id="videoPreview">
+      <div class="thumb-container">
+        <img id="thumbImg" src="" alt="thumbnail">
+        <span class="duration-badge" id="durBadge">0:00</span>
+      </div>
+      <div class="video-meta">
+        <div class="video-title" id="vidTitle">—</div>
+        <div class="video-channel" id="vidChannel">—</div>
+        <div class="video-views" id="vidViews">—</div>
+      </div>
+    </div>
+
+    <!-- VIDEO TAB -->
+    <div id="panel-video">
+      <div class="merge-note">
+        <span class="icon">⚡</span>
+        <span>
+          <strong>Smart Merge Mode ON:</strong> For 1080p+ videos, YouTube streams video and audio separately.
+          The backend automatically downloads both and merges them using <strong>ffmpeg</strong> — you always get the best quality with full audio.
+        </span>
+      </div>
+
+      <div class="section-label">Select Quality</div>
+      <div class="format-grid" id="videoFormatGrid">
+        <div class="format-card selected" onclick="selectFormat(this,'best')" data-fmt="bestvideo+bestaudio/best">
+          <div class="format-badge badge-best badge-video">★ BEST</div>
+          <div class="format-res">Auto</div>
+          <div class="format-info">Best quality + audio<br>merged automatically</div>
+        </div>
+        <div class="format-card" onclick="selectFormat(this,'4k')" data-fmt="bestvideo[height<=2160]+bestaudio/best[height<=2160]">
+          <div class="format-badge badge-4k">4K 2160p</div>
+          <div class="format-res">2160p</div>
+          <div class="format-info">UHD · VP9/H265<br>audio merged</div>
+        </div>
+        <div class="format-card" onclick="selectFormat(this,'1080')" data-fmt="bestvideo[height<=1080]+bestaudio/best[height<=1080]">
+          <div class="format-badge badge-video">Full HD</div>
+          <div class="format-res">1080p</div>
+          <div class="format-info">1920×1080 · H264<br>audio merged</div>
+        </div>
+        <div class="format-card" onclick="selectFormat(this,'720')" data-fmt="bestvideo[height<=720]+bestaudio/best[height<=720]">
+          <div class="format-badge badge-video">HD</div>
+          <div class="format-res">720p</div>
+          <div class="format-info">1280×720 · H264<br>audio merged</div>
+        </div>
+        <div class="format-card" onclick="selectFormat(this,'480')" data-fmt="bestvideo[height<=480]+bestaudio/best[height<=480]">
+          <div class="format-badge badge-video">SD</div>
+          <div class="format-res">480p</div>
+          <div class="format-info">854×480<br>audio merged</div>
+        </div>
+        <div class="format-card" onclick="selectFormat(this,'360')" data-fmt="bestvideo[height<=360]+bestaudio/best[height<=360]">
+          <div class="format-badge badge-video">LOW</div>
+          <div class="format-res">360p</div>
+          <div class="format-info">Small size<br>audio merged</div>
+        </div>
+      </div>
+
+      <div class="section-label">Container Format</div>
+      <div class="options-row">
+        <select class="option-select" id="videoContainer">
+          <option value="mp4">MP4 (Recommended)</option>
+          <option value="mkv">MKV (Best compatibility)</option>
+          <option value="webm">WebM</option>
+          <option value="mov">MOV</option>
+          <option value="avi">AVI</option>
+        </select>
+        <select class="option-select" id="videoSubtitle">
+          <option value="">No Subtitles</option>
+          <option value="en">English Subtitles</option>
+          <option value="hi">Hindi Subtitles</option>
+          <option value="all">All Subtitles</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- AUDIO TAB -->
+    <div id="panel-audio" style="display:none">
+      <div class="section-label">Audio Format</div>
+      <div class="format-grid">
+        <div class="format-card selected" onclick="selectAudioFmt(this,'mp3')" data-afmt="mp3">
+          <div class="format-badge badge-audio">MP3</div>
+          <div class="format-res">MP3</div>
+          <div class="format-info">Universal · 320kbps<br>best compatibility</div>
+        </div>
+        <div class="format-card" onclick="selectAudioFmt(this,'flac')" data-afmt="flac">
+          <div class="format-badge badge-best">FLAC</div>
+          <div class="format-res">FLAC</div>
+          <div class="format-info">Lossless audio<br>highest quality</div>
+        </div>
+        <div class="format-card" onclick="selectAudioFmt(this,'m4a')" data-afmt="m4a">
+          <div class="format-badge badge-audio">M4A</div>
+          <div class="format-res">M4A</div>
+          <div class="format-info">AAC · Apple devices<br>great quality</div>
+        </div>
+        <div class="format-card" onclick="selectAudioFmt(this,'opus')" data-afmt="opus">
+          <div class="format-badge badge-audio">OPUS</div>
+          <div class="format-res">Opus</div>
+          <div class="format-info">Best quality/size<br>smallest file</div>
+        </div>
+        <div class="format-card" onclick="selectAudioFmt(this,'wav')" data-afmt="wav">
+          <div class="format-badge badge-audio">WAV</div>
+          <div class="format-res">WAV</div>
+          <div class="format-info">Uncompressed<br>editing ready</div>
+        </div>
+        <div class="format-card" onclick="selectAudioFmt(this,'aac')" data-afmt="aac">
+          <div class="format-badge badge-audio">AAC</div>
+          <div class="format-res">AAC</div>
+          <div class="format-info">High quality<br>small size</div>
+        </div>
+      </div>
+
+      <div class="section-label">Quality</div>
+      <div class="options-row">
+        <select class="option-select" id="audioBitrate">
+          <option value="320">320 kbps (Best)</option>
+          <option value="256">256 kbps</option>
+          <option value="192">192 kbps</option>
+          <option value="128">128 kbps (Smaller)</option>
+          <option value="96">96 kbps (Minimum)</option>
+        </select>
+        <select class="option-select" id="audioThumb">
+          <option value="1">Embed Thumbnail</option>
+          <option value="0">No Thumbnail</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- CUSTOM TAB -->
+    <div id="panel-custom" style="display:none">
+      <div class="section-label">Custom yt-dlp Format String</div>
+      <div class="code-block" style="margin-bottom:12px; color: var(--muted); font-size:11px; line-height:1.8;">
+        Examples:<br>
+        <span style="color:var(--accent2)">bestvideo+bestaudio</span> → Best video + best audio (merged)<br>
+        <span style="color:var(--accent2)">bestvideo[ext=mp4]+bestaudio[ext=m4a]</span> → MP4 video + M4A audio<br>
+        <span style="color:var(--accent2)">worstvideo+worstaudio</span> → Smallest file<br>
+        <span style="color:var(--accent2)">137+140</span> → Use specific format IDs (from info fetch)
+      </div>
+      <div class="options-row">
+        <input type="text" class="url-input" id="customFmt" placeholder="bestvideo+bestaudio/best" style="flex:1" />
+        <select class="option-select" id="customExt" style="flex:0 0 120px">
+          <option value="mp4">mp4</option>
+          <option value="mkv">mkv</option>
+          <option value="webm">webm</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Progress -->
+    <div class="progress-container" id="progressContainer">
+      <div class="progress-text">
+        <span id="progressLabel">Preparing download…</span>
+        <span id="progressPct">0%</span>
+      </div>
+      <div class="progress-bar-bg">
+        <div class="progress-bar-fill" id="progressFill"></div>
+      </div>
+    </div>
+
+    <!-- Download btn -->
+    <button class="btn-download" id="btnDownload" onclick="startDownload()">
+      <span>⬇</span> DOWNLOAD
+    </button>
+  </div>
+
+  <!-- Download history -->
+  <div class="main-card" style="margin-top:0">
+    <div class="section-label">Recent Downloads</div>
+    <div id="historyList">
+      <div class="empty-state">
+        <div class="empty-icon">📭</div>
+        <div class="empty-text">No downloads yet.<br>Paste a URL above to get started.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Setup guide -->
+  <div class="setup-card">
+    <div class="setup-title">🔧 Setup Guide — Run Local Backend</div>
+    <p style="font-size:11px;color:var(--muted);margin-bottom:20px;line-height:1.7;">
+      This frontend connects to a local Python server. Follow these steps once — then it runs forever.
+    </p>
+
+    <div class="setup-steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-content">
+          <div class="step-title">Install Python & pip</div>
+          <div class="step-desc">Make sure Python 3.8+ is installed. Download from python.org if needed.</div>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-content">
+          <div class="step-title">Install yt-dlp and dependencies</div>
+          <div class="code-block">
+            pip install yt-dlp flask flask-cors
+            <button class="copy-btn" onclick="copyCode(this)">copy</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-content">
+          <div class="step-title">Install ffmpeg (REQUIRED for 1080p+ audio merge)</div>
+          <div class="step-desc">ffmpeg handles merging video+audio streams automatically.</div>
+          <div class="code-block">
+            # Windows (via winget):<br>
+            winget install ffmpeg<br><br>
+            # macOS:<br>
+            brew install ffmpeg<br><br>
+            # Linux (Ubuntu/Debian):<br>
+            sudo apt install ffmpeg
+            <button class="copy-btn" onclick="copyCode(this)">copy</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num">4</div>
+        <div class="step-content">
+          <div class="step-title">Save and run server.py</div>
+          <div class="step-desc">Save the server code (button below), then run it:</div>
+          <div class="code-block">
+            python server.py
+            <button class="copy-btn" onclick="copyCode(this)">copy</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num">5</div>
+        <div class="step-content">
+          <div class="step-title">Open index.html in your browser</div>
+          <div class="step-desc">Open this file in Chrome/Firefox. The status bar will turn green when connected. Downloads save to a <strong>downloads/</strong> folder next to server.py.</div>
+        </div>
+      </div>
+    </div>
+
+    <button
+      onclick="downloadServerPy()"
+      style="background: var(--surface); border: 1px solid var(--border); border-radius:10px; padding: 12px 20px; color:var(--accent2); font-family:'Space Mono',monospace; font-size:12px; cursor:pointer; margin-top:8px; transition: all 0.2s; width:100%"
+      onmouseover="this.style.borderColor='var(--accent2)'"
+      onmouseout="this.style.borderColor='var(--border)'"
+    >
+      📥 Download server.py
+    </button>
+  </div>
+
+  <div style="text-align:center;padding:20px 0 32px;color:var(--muted);font-size:10px;letter-spacing:1px;">
+    YT VAULT · Powered by yt-dlp + ffmpeg · For personal use only
+  </div>
+</div>
+
+<!-- Toast notification -->
+<div class="toast" id="toast">
+  <span id="toastIcon">✓</span>
+  <span id="toastMsg">Done!</span>
+</div>
+
+<script>
+// ═══════════════════════════════
+// CONFIG
+// ═══════════════════════════════
+const API = 'https://ytdown-l92k.onrender.com';
+// State
+let currentTab = 'video';
+let selectedVideoFmt = 'bestvideo+bestaudio/best';
+let selectedAudioFmt = 'mp3';
+let downloadHistory = JSON.parse(localStorage.getItem('ytv_history') || '[]');
+let isDownloading = false;
+
+// ═══════════════════════════════
+// INIT
+// ═══════════════════════════════
+window.onload = () => {
+  checkServer();
+  renderHistory();
+  setInterval(checkServer, 8000);
+};
+
+// ═══════════════════════════════
+// SERVER STATUS
+// ═══════════════════════════════
+async function checkServer() {
+  const dot = document.getElementById('statusDot');
+  const txt = document.getElementById('statusText');
+
+  try {
+    const controller = new AbortController();
+    setTimeout(() => controller.abort(), 3000);
+
+    const r = await fetch(`${API}/ping`, { signal: controller.signal });
+
+    if (r.ok) {
+      dot.className = 'status-dot online';
+      txt.textContent = 'Backend online — ready to download';
+    } else {
+      throw new Error();
+    }
+  } catch {
+    dot.className = 'status-dot offline';
+    txt.textContent = 'Backend waking up… (Render cold start)';
+  }
+}
+
+// ═══════════════════════════════
+// FETCH VIDEO INFO
+// ═══════════════════════════════
+async function fetchInfo() {
+  const url = document.getElementById('urlInput').value.trim();
+  if (!url) { showToast('Paste a URL first!', 'error'); return; }
+
+  const btn = document.getElementById('btnFetch');
+  const btnText = document.getElementById('fetchBtnText');
+  btn.disabled = true;
+  btnText.innerHTML = '<span class="spinner"></span>';
+
+  try {
+    const r = await fetch(`${API}/info`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url })
+    });
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.error || 'Failed');
+
+    // Show preview
+    document.getElementById('thumbImg').src = data.thumbnail || '';
+    document.getElementById('vidTitle').textContent = data.title || 'Unknown';
+    document.getElementById('vidChannel').textContent = '📺 ' + (data.channel || 'Unknown Channel');
+    document.getElementById('vidViews').textContent = data.view_count ? `👁 ${Number(data.view_count).toLocaleString()} views · ${data.upload_date || ''}` : '';
+    document.getElementById('durBadge').textContent = formatDuration(data.duration || 0);
+    document.getElementById('videoPreview').classList.add('show');
+
+    showToast('Info loaded! Choose format & download.', 'success');
+  } catch (e) {
+    showToast('Error: ' + e.message + '. Is the backend running?', 'error');
+  } finally {
+    btn.disabled = false;
+    btnText.textContent = 'Fetch';
+  }
+}
+
+// ═══════════════════════════════
+// DOWNLOAD
+// ═══════════════════════════════
+async function startDownload() {
+  if (isDownloading) return;
+  const url = document.getElementById('urlInput').value.trim();
+  if (!url) { showToast('Paste a URL first!', 'error'); return; }
+
+  isDownloading = true;
+  const btn = document.getElementById('btnDownload');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Downloading…';
+
+  showProgress(true, 'Connecting to server…', 0);
+
+  // Build request
+  let body = { url };
+
+  if (currentTab === 'video') {
+    body.format = selectedVideoFmt;
+    body.ext = document.getElementById('videoContainer').value;
+    const sub = document.getElementById('videoSubtitle').value;
+    if (sub) body.subtitles = sub;
+    body.mode = 'video';
+  } else if (currentTab === 'audio') {
+    body.format = 'bestaudio/best';
+    body.audio_format = selectedAudioFmt;
+    body.audio_bitrate = document.getElementById('audioBitrate').value;
+    body.embed_thumb = document.getElementById('audioThumb').value === '1';
+    body.mode = 'audio';
+  } else {
+    body.format = document.getElementById('customFmt').value || 'bestvideo+bestaudio/best';
+    body.ext = document.getElementById('customExt').value;
+    body.mode = 'custom';
+  }
+
+  const title = document.getElementById('vidTitle').textContent || url;
+  addHistoryItem(title, currentTab, 'loading');
+
+  try {
+    // Poll for progress via EventSource (SSE) or fallback polling
+    const res = await fetch(`${API}/download`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error || 'Download failed');
+    }
+
+    // Blob download
+    showProgress(true, 'Receiving file…', 90);
+    const blob = await res.blob();
+    const filename = res.headers.get('X-Filename') || `download.${body.ext || 'mp4'}`;
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(a.href);
+
+    showProgress(true, 'Complete!', 100);
+    setTimeout(() => showProgress(false), 2000);
+    updateLastHistory('done');
+    showToast(`✓ Downloaded: ${filename}`, 'success');
+  } catch (e) {
+    showProgress(false);
+    updateLastHistory('error');
+    showToast('Error: ' + e.message, 'error');
+  } finally {
+    isDownloading = false;
+    btn.disabled = false;
+    btn.innerHTML = '<span>⬇</span> DOWNLOAD';
+  }
+}
+
+// ═══════════════════════════════
+// UI HELPERS
+// ═══════════════════════════════
+function switchTab(tab) {
+  currentTab = tab;
+  ['video','audio','custom'].forEach(t => {
+    document.getElementById(`panel-${t}`).style.display = t === tab ? 'block' : 'none';
+    document.getElementById(`tab-${t}`).classList.toggle('active', t === tab);
+  });
+}
+
+function selectFormat(el, key) {
+  document.querySelectorAll('#videoFormatGrid .format-card').forEach(c => c.classList.remove('selected'));
+  el.classList.add('selected');
+  selectedVideoFmt = el.dataset.fmt;
+}
+
+function selectAudioFmt(el, fmt) {
+  document.querySelectorAll('#panel-audio .format-card').forEach(c => c.classList.remove('selected'));
+  el.classList.add('selected');
+  selectedAudioFmt = fmt;
+}
+
+function showProgress(show, label = '', pct = 0) {
+  const c = document.getElementById('progressContainer');
+  c.classList.toggle('show', show);
+  document.getElementById('progressLabel').textContent = label;
+  document.getElementById('progressPct').textContent = pct + '%';
+  document.getElementById('progressFill').style.width = pct + '%';
+  if (show && pct < 90) {
+    let p = pct;
+    const iv = setInterval(() => {
+      p = Math.min(p + Math.random() * 3, 88);
+      document.getElementById('progressFill').style.width = p + '%';
+      document.getElementById('progressPct').textContent = Math.round(p) + '%';
+      if (p >= 88) clearInterval(iv);
+    }, 400);
+  }
+}
+
+function formatDuration(secs) {
+  const h = Math.floor(secs/3600), m = Math.floor((secs%3600)/60), s = secs%60;
+  return h ? `${h}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}` : `${m}:${String(s).padStart(2,'0')}`;
+}
+
+function showToast(msg, type = 'success') {
+  const t = document.getElementById('toast');
+  document.getElementById('toastMsg').textContent = msg;
+  document.getElementById('toastIcon').textContent = type === 'success' ? '✓' : '✕';
+  t.className = `toast show ${type}`;
+  setTimeout(() => t.className = 'toast', 4000);
+}
+
+// ═══════════════════════════════
+// HISTORY
+// ═══════════════════════════════
+function addHistoryItem(title, type, status) {
+  downloadHistory.unshift({ title, type, status, ts: Date.now() });
+  if (downloadHistory.length > 20) downloadHistory.pop();
+  saveHistory();
+  renderHistory();
+}
+
+function updateLastHistory(status) {
+  if (downloadHistory.length) downloadHistory[0].status = status;
+  saveHistory();
+  renderHistory();
+}
+
+function saveHistory() {
+  localStorage.setItem('ytv_history', JSON.stringify(downloadHistory));
+}
+
+function renderHistory() {
+  const el = document.getElementById('historyList');
+  if (!downloadHistory.length) {
+    el.innerHTML = `<div class="empty-state"><div class="empty-icon">📭</div><div class="empty-text">No downloads yet.<br>Paste a URL above to get started.</div></div>`;
+    return;
+  }
+  el.innerHTML = downloadHistory.slice(0, 10).map(h => `
+    <div class="history-item">
+      <div class="history-icon ${h.type === 'audio' ? 'audio' : 'video'}">${h.type === 'audio' ? '🎵' : '🎬'}</div>
+      <div class="history-info">
+        <div class="history-title">${h.title}</div>
+        <div class="history-meta">${h.type.toUpperCase()} · ${new Date(h.ts).toLocaleTimeString()}</div>
+      </div>
+      <div class="history-status ${h.status === 'done' ? 'status-done' : h.status === 'error' ? 'status-error' : 'status-loading'}">
+        ${h.status === 'done' ? '✓ Done' : h.status === 'error' ? '✕ Error' : '⟳ Loading'}
+      </div>
+    </div>
+  `).join('');
+}
+
+// ═══════════════════════════════
+// COPY CODE
+// ═══════════════════════════════
+function copyCode(btn) {
+  const text = btn.parentElement.innerText.replace('copy','').trim();
+  navigator.clipboard.writeText(text);
+  btn.textContent = 'copied!';
+  setTimeout(() => btn.textContent = 'copy', 2000);
+}
+
+// ═══════════════════════════════
+// DOWNLOAD server.py
+// ═══════════════════════════════
+function downloadServerPy() {
+  const code = `#!/usr/bin/env python3
+"""
+YT Vault Backend — server.py
+Serves yt-dlp downloads with full audio merge support for 1080p+
+Run: python server.py
+Requires: pip install yt-dlp flask flask-cors
+          ffmpeg installed on system PATH
+"""
+
+import os, io, re, json, tempfile, threading
+from flask import Flask, request, jsonify, send_file, after_this_request
+from flask_cors import CORS
+import yt_dlp
+
+app = Flask(__name__)
+CORS(app, expose_headers=["X-Filename"])
+
+DOWNLOAD_DIR = os.path.join(os.path.dirname(__file__), "downloads")
+os.makedirs(DOWNLOAD_DIR, exist_ok=True)
+
+
+@app.route("/ping")
+def ping():
+    return jsonify({"status": "ok", "message": "YT Vault backend running"})
+
+
+@app.route("/info", methods=["POST"])
+def get_info():
+    data = request.json or {}
+    url = data.get("url", "").strip()
+    if not url:
+        return jsonify({"error": "No URL provided"}), 400
+
+    ydl_opts = {
+        "quiet": True,
+        "no_warnings": True,
+        "skip_download": True,
+        "noplaylist": True,
+    }
+    try:
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            info = ydl.extract_info(url, download=False)
+            return jsonify({
+                "title": info.get("title"),
+                "channel": info.get("uploader") or info.get("channel"),
+                "thumbnail": info.get("thumbnail"),
+                "duration": info.get("duration"),
+                "view_count": info.get("view_count"),
+                "upload_date": info.get("upload_date"),
+                "formats": [
+                    {
+                        "format_id": f.get("format_id"),
+                        "ext": f.get("ext"),
+                        "height": f.get("height"),
+                        "abr": f.get("abr"),
+                        "filesize": f.get("filesize"),
+                        "vcodec": f.get("vcodec"),
+                        "acodec": f.get("acodec"),
+                        "format_note": f.get("format_note"),
+                    }
+                    for f in info.get("formats", [])
+                ]
+            })
+    except yt_dlp.utils.DownloadError as e:
+        return jsonify({"error": str(e)}), 400
+    except Exception as e:
+        return jsonify({"error": f"Unexpected error: {e}"}), 500
+
+
+@app.route("/download", methods=["POST"])
+def download():
+    data = request.json or {}
+    url   = data.get("url", "").strip()
+    mode  = data.get("mode", "video")
+    fmt   = data.get("format", "bestvideo+bestaudio/best")
+    ext   = data.get("ext", "mp4")
+
+    if not url:
+        return jsonify({"error": "No URL provided"}), 400
+
+    tmp_dir = tempfile.mkdtemp(dir=DOWNLOAD_DIR)
+    out_template = os.path.join(tmp_dir, "%(title)s.%(ext)s")
+
+    ydl_opts = {
+        "outtmpl": out_template,
+        "quiet": True,
+        "no_warnings": True,
+        "noplaylist": True,
+        # CRITICAL: ffmpeg post-processor merges video+audio for 1080p+
+        "postprocessors": [],
+    }
+
+    if mode == "audio":
+        audio_fmt = data.get("audio_format", "mp3")
+        bitrate   = data.get("audio_bitrate", "320")
+        embed_thumb = data.get("embed_thumb", True)
+
+        ydl_opts["format"] = "bestaudio/best"
+        ydl_opts["postprocessors"] = [
+            {
+                "key": "FFmpegExtractAudio",
+                "preferredcodec": audio_fmt,
+                "preferredquality": str(bitrate),
+            }
+        ]
+        if embed_thumb:
+            ydl_opts["postprocessors"].append({"key": "EmbedThumbnail"})
+            ydl_opts["writethumbnail"] = True
+
+    else:
+        # VIDEO mode — KEY SETTINGS for audio+video merge
+        ydl_opts["format"] = fmt
+        # Merge video+audio into container (ffmpeg required)
+        ydl_opts["merge_output_format"] = ext
+        # Prefer ffmpeg merger for highest quality
+        ydl_opts["postprocessors"] = [
+            {"key": "FFmpegVideoConvertor", "preferedformat": ext}
+        ]
+
+        subs = data.get("subtitles")
+        if subs:
+            ydl_opts["writesubtitles"] = True
+            ydl_opts["writeautomaticsub"] = True
+            ydl_opts["subtitleslangs"] = [subs] if subs != "all" else ["all"]
+            ydl_opts["postprocessors"].append({"key": "FFmpegEmbedSubtitle"})
+
+    try:
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            info = ydl.extract_info(url, download=True)
+            title = info.get("title", "download")
+
+        # Find the downloaded file
+        files = [f for f in os.listdir(tmp_dir) if not f.endswith(('.json', '.ytdl'))]
+        if not files:
+            return jsonify({"error": "Download produced no file"}), 500
+
+        filepath = os.path.join(tmp_dir, files[0])
+        safe_name = re.sub(r'[^\\w\\s\\-_\\.]', '', os.path.basename(filepath))[:200]
+        mime = "video/mp4" if mode != "audio" else "audio/mpeg"
+
+        @after_this_request
+        def cleanup(response):
+            def _del():
+                try:
+                    import shutil; shutil.rmtree(tmp_dir, ignore_errors=True)
+                except: pass
+            threading.Thread(target=_del, daemon=True).start()
+            return response
+
+        return send_file(
+            filepath,
+            as_attachment=True,
+            download_name=safe_name,
+            mimetype=mime,
+        ), 200, {"X-Filename": safe_name}
+
+    except yt_dlp.utils.DownloadError as e:
+        return jsonify({"error": str(e)}), 400
+    except FileNotFoundError:
+        return jsonify({"error": "ffmpeg not found. Install it: https://ffmpeg.org/download.html"}), 500
+    except Exception as e:
+        return jsonify({"error": f"Unexpected error: {e}"}), 500
+
+
+if __name__ == "__main__":
+    print("\\n🎬 YT Vault Backend starting...")
+    print("   Port: 5050")
+    print("   Downloads folder:", DOWNLOAD_DIR)
+    print("   Open index.html in your browser\\n")
+    app.run(host="0.0.0.0", port=5050, debug=False)
+`;
+
+  const blob = new Blob([code], { type: 'text/plain' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'server.py';
+  a.click();
+  URL.revokeObjectURL(a.href);
+  showToast('server.py downloaded!', 'success');
+}
+
+// Enter key to fetch
+document.getElementById('urlInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') fetchInfo();
+});
+</script>
+</body>
+</html>
