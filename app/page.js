@@ -9,7 +9,7 @@ export default function Home() {
   const [error, setError] = useState('');
   const [downloading, setDownloading] = useState(false);
 
-  const backendUrl = 'https://airdownbackend.onrender.com'; // ← CHANGE THIS to your Render URL
+  const backendUrl = 'https://ytdownback.onrender.com'; // ← CHANGE THIS to your Render URL
 
   const fetchInfo = async () => {
     if (!url) return;
