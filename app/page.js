@@ -11,7 +11,10 @@ export default function Airdown() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!url.trim()) return;
+    if (!url.trim()) {
+      setError('Please paste a YouTube link');
+      return;
+    }
 
     setLoading(true);
     setError('');
@@ -24,29 +27,41 @@ export default function Airdown() {
         body: JSON.stringify({
           url: url.trim(),
           isAudioOnly: false,
+          isNoTTWatermark: true,
         }),
       });
+
+      if (!response.ok) {
+        throw new Error('Service temporarily unavailable. Try again.');
+      }
 
       const data = await response.json();
 
       if (data.status === 'error' || !data.url) {
-        throw new Error(data.text || 'Failed to process this video. Try another one.');
+        throw new Error(data.text || 'Failed to process this video. Try another link.');
       }
 
       setVideoInfo({
         title: data.text || 'YouTube Video',
         downloadUrl: data.url,
-        thumbnail: `https://i.ytimg.com/vi/${url.split('v=')[1]?.split('&')[0] || url.split('/').pop()}/maxresdefault.jpg`,
+        thumbnail: `https://i.ytimg.com/vi/${getVideoId(url)}/maxresdefault.jpg`,
       });
     } catch (err) {
-      setError(err.message || 'Something went wrong. Try a different public video.');
+      console.error(err);
+      setError('Failed to fetch. YouTube is blocking the service right now. Try again in a few minutes or use a different video.');
     } finally {
       setLoading(false);
     }
   };
 
+  const getVideoId = (url) => {
+    const regExp = /^.*(youtu\.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+    const match = url.match(regExp);
+    return match && match[2].length === 11 ? match[2] : '';
+  };
+
   const handleDownload = () => {
-    if (!videoInfo) return;
+    if (!videoInfo?.downloadUrl) return;
     setDownloading(true);
 
     const link = document.createElement('a');
@@ -56,7 +71,7 @@ export default function Airdown() {
     link.click();
     document.body.removeChild(link);
 
-    setTimeout(() => setDownloading(false), 1500);
+    setTimeout(() => setDownloading(false), 2000);
   };
 
   return (
@@ -64,7 +79,7 @@ export default function Airdown() {
       <div className="max-w-xl mx-auto">
         <div className="text-center mb-12 pt-10">
           <h1 className="text-6xl font-bold mb-2">Airdown</h1>
-          <p className="text-zinc-400">YouTube Downloader • 4K with Audio</p>
+          <p className="text-zinc-400">YouTube Downloader • Personal Use</p>
         </div>
 
         <form onSubmit={handleSubmit} className="bg-zinc-900 p-8 rounded-3xl mb-10">
@@ -85,7 +100,7 @@ export default function Airdown() {
         </form>
 
         {error && (
-          <div className="bg-red-950 border border-red-800 p-5 rounded-2xl text-red-400 mb-8 text-center">
+          <div className="bg-red-950 border border-red-800 p-6 rounded-2xl text-red-400 mb-8 text-center">
             {error}
           </div>
         )}
@@ -97,6 +112,7 @@ export default function Airdown() {
                 src={videoInfo.thumbnail} 
                 alt="thumbnail" 
                 className="w-full rounded-2xl mb-6"
+                onError={(e) => e.target.style.display = 'none'}
               />
             )}
             
@@ -107,11 +123,11 @@ export default function Airdown() {
               disabled={downloading}
               className="w-full bg-green-600 hover:bg-green-700 py-6 rounded-2xl font-bold text-xl flex items-center justify-center gap-3 disabled:opacity-70"
             >
-              ⬇️ Download Video (4K + Audio)
+              ⬇️ Download Video (with Audio)
             </button>
 
             <p className="text-xs text-zinc-500 mt-10">
-              For personal use only • Powered by Cobalt • Respect copyright
+              For personal use only • Powered by Cobalt API
             </p>
           </div>
         )}
